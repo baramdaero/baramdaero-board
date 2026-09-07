@@ -1,0 +1,540 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta name="robots" content="noindex, nofollow">
+<title>바람대로 원고 보드</title>
+<script>
+  // 스타일보다 먼저 저장된 테마 선택을 적용한다. system이면 아무것도 표시하지 않는다.
+  try {
+    var t = localStorage.getItem("bd-theme");
+    if (t === "light" || t === "dark") document.documentElement.dataset.theme = t;
+  } catch (e) {}
+</script>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="stylesheet" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<style>
+/* ─────────────────────────────────────────────
+   토큰 — 바람대로 DESIGN.md v3 (teal) 확정 토큰.
+   다크는 같은 문서의 '다크 구간' 토큰(teal-deep 지반 / base 본문 / ice 강조)에서 파생.
+   대비 실측 2026-09-07: 본문·서브·강조 전 조합 4.5:1 이상, 조작 경계 3:1 이상.
+   ───────────────────────────────────────────── */
+:root{
+  color-scheme: light dark;
+
+  --bg:#F7F9FA;          /* br-base   */
+  --surface:#FFFFFF;
+  --soft:#E0E5E9;        /* br-mist   */
+  --selected:#EEF5F7;
+  --ink:#0B2027;         /* br-ink        16.80:1 on surface */
+  --sub:#465D68;         /* br-ink-sub     6.94:1 on surface */
+  --primary:#004E64;     /* br-teal        9.24:1 on surface */
+  --on-primary:#FFFFFF;  /*                9.24:1 on primary */
+  --hover:#00293A;       /* br-teal-deep */
+  --focus:#004E64;
+  --control:#5E7681;     /* 의미 있는 경계  4.79:1 on surface */
+  --line:#E0E5E9;        /* 장식 구분선 */
+  --ice:#BFE9F2;
+  --eyebrow-bg:#BFE9F2;
+  --eyebrow-ink:#004E64; /*                7.10:1 on ice */
+
+  --glass:rgb(255 255 255 / .46);
+  --glass-border:rgb(255 255 255 / .92);
+  --glass-inset:inset 0 1px 0 rgb(255 255 255 / .70);
+  --shadow:0 32px 80px -24px rgb(0 41 58 / .22), 0 8px 22px -12px rgb(0 41 58 / .12);
+  --glow-a:rgb(191 233 242 / .90);
+  --glow-b:rgb(0 78 100 / .10);
+
+  --dur-color:200ms;
+  --dur-ui:240ms;
+  --ease-out:cubic-bezier(.16,1,.3,1);
+
+  --maxw:1120px;
+  --sans:'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#00293A; --surface:#0A3A4D; --soft:#123F52; --selected:#12475C;
+    --ink:#F7F9FA;        /* 11.53:1 on surface */
+    --sub:#A9C4CE;        /*  6.65:1 on surface */
+    --primary:#BFE9F2;    /*  9.36:1 on surface */
+    --on-primary:#004E64; /*  7.10:1 on primary */
+    --hover:#FFFFFF; --focus:#BFE9F2;
+    --control:#8AA9B5;    /*  4.88:1 on surface */
+    --line:#1D4E60;
+    --eyebrow-bg:#123F52; --eyebrow-ink:#BFE9F2;
+    --glass:rgb(10 58 77 / .52);
+    --glass-border:rgb(191 233 242 / .28);
+    --glass-inset:inset 0 1px 0 rgb(191 233 242 / .22);
+    --shadow:0 38px 90px -20px rgb(0 0 0 / .55), 0 8px 28px rgb(0 0 0 / .18);
+    --glow-a:rgb(0 78 100 / .85); --glow-b:rgb(191 233 242 / .08);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#00293A; --surface:#0A3A4D; --soft:#123F52; --selected:#12475C;
+  --ink:#F7F9FA; --sub:#A9C4CE; --primary:#BFE9F2; --on-primary:#004E64;
+  --hover:#FFFFFF; --focus:#BFE9F2; --control:#8AA9B5; --line:#1D4E60;
+  --eyebrow-bg:#123F52; --eyebrow-ink:#BFE9F2;
+  --glass:rgb(10 58 77 / .52);
+  --glass-border:rgb(191 233 242 / .28);
+  --glass-inset:inset 0 1px 0 rgb(191 233 242 / .22);
+  --shadow:0 38px 90px -20px rgb(0 0 0 / .55), 0 8px 28px rgb(0 0 0 / .18);
+  --glow-a:rgb(0 78 100 / .85); --glow-b:rgb(191 233 242 / .08);
+}
+
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font-family:var(--sans); font-size:16px; line-height:1.65;
+  word-break:keep-all; -webkit-font-smoothing:antialiased;
+}
+@media (min-width:768px){ body{font-size:17px} }
+:focus-visible{outline:2px solid var(--focus); outline-offset:2px; border-radius:4px}
+h1,h2,h3{text-wrap:balance; margin:0}
+p{text-wrap:pretty; margin:0}
+
+/* 국소 조명 — 페이지에서 한 곳(헤더 뒤)만. 본문을 그 위에 직접 놓지 않는다. */
+.glow{
+  position:absolute; inset:0 0 auto 0; height:660px; z-index:0; pointer-events:none;
+  background:
+    radial-gradient(46% 62% at 16% 2%, var(--glow-a) 0%, transparent 70%),
+    radial-gradient(38% 54% at 88% 10%, var(--glow-b) 0%, transparent 74%),
+    radial-gradient(60% 40% at 62% 62%, var(--glow-a) 0%, transparent 72%);
+}
+.page{position:relative; max-width:var(--maxw); margin:0 auto; padding:24px 20px 80px; z-index:1}
+@media (min-width:768px){ .page{padding:32px 24px 96px} }
+
+/* ── 헤더 프레임 — 이 페이지의 유일한 유리 표면 ── */
+.frame{
+  position:relative; border-radius:30px; padding:24px;
+  background:var(--surface);                 /* 불투명 fallback */
+  border:1px solid var(--glass-border);
+  box-shadow:var(--shadow), var(--glass-inset);
+  margin-bottom:32px;
+}
+@media (min-width:768px){ .frame{padding:32px} }
+@supports ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+  .frame{ background:var(--glass); backdrop-filter:blur(24px); -webkit-backdrop-filter:blur(24px); }
+}
+@media (prefers-reduced-transparency: reduce){
+  .frame{ background:var(--surface); backdrop-filter:none; -webkit-backdrop-filter:none; }
+}
+
+/* 모바일에서는 소개·설정이 첫 화면을 먹지 않도록 순서를 바꾼다: 소개 → 수치 → 재조사 → 테마 */
+.frame{display:grid; gap:20px; grid-template-areas:"lead" "stats" "survey" "theme"}
+@media (min-width:768px){
+  .frame{grid-template-columns:minmax(0,1fr) auto; grid-template-areas:"lead theme" "stats stats" "survey survey"; gap:24px}
+}
+.lead{grid-area:lead; min-width:0}
+.theme{grid-area:theme}
+.stats{grid-area:stats}
+.survey{grid-area:survey}
+.eyebrow{
+  display:inline-block; background:var(--eyebrow-bg); color:var(--eyebrow-ink);
+  font-size:13px; font-weight:600; letter-spacing:.02em;
+  padding:4px 12px; border-radius:999px; margin-bottom:12px;
+}
+h1{font-size:clamp(30px,3.6vw,40px); font-weight:800; line-height:1.2; letter-spacing:-.02em}
+.lead p{margin-top:8px; color:var(--sub); font-size:16px}
+
+/* 테마 선택 — 네이티브 radio 3개. 색만이 아니라 표식과 라벨로 상태를 알린다. */
+.theme{border:0; margin:0; padding:0; display:flex; gap:8px; align-items:center; flex-wrap:wrap}
+.theme legend{font-size:14px; color:var(--sub); padding:0 8px 0 0; float:left; line-height:2.4}
+.theme label{
+  display:inline-flex; align-items:center; gap:6px; cursor:pointer;
+  background:var(--surface); color:var(--ink);
+  border:1px solid var(--control); border-radius:10px;
+  padding:7px 12px; font-size:14px;
+  transition:background var(--dur-color) var(--ease-out), color var(--dur-color) var(--ease-out);
+}
+.theme input{position:absolute; opacity:0; width:1px; height:1px}
+.theme .mark{width:14px; height:14px; border-radius:50%; border:2px solid var(--control); flex:none}
+.theme input:checked + .mark{border-color:var(--on-primary); background:var(--on-primary)}
+.theme label:has(input:checked){background:var(--primary); color:var(--on-primary); border-color:var(--primary); font-weight:600}
+.theme label:has(input:focus-visible){outline:2px solid var(--focus); outline-offset:2px}
+
+/* 요약 수치 — 유리 안의 불투명 읽기 면 */
+.stats{
+  display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1px;
+  background:var(--line); border:1px solid var(--line);
+  border-radius:20px; overflow:hidden;
+}
+@media (min-width:640px){ .stats{grid-template-columns:repeat(4,minmax(0,1fr))} }
+.stat{background:var(--surface); padding:16px}
+.stat b{display:block; font-size:32px; font-weight:800; line-height:1.15; font-variant-numeric:tabular-nums; letter-spacing:-.02em}
+.stat span{display:block; font-size:14px; color:var(--sub); margin-top:2px}
+.stat.on b{color:var(--primary)}
+
+.survey{
+  background:var(--surface); border:1px solid var(--line);
+  border-radius:20px; padding:16px 20px;
+}
+.survey p{font-size:16px; line-height:1.7; color:var(--sub); text-wrap:pretty; max-width:62ch}
+.survey p strong{color:var(--ink); font-weight:700}
+.meter{display:flex; align-items:center; gap:12px; margin-top:12px}
+.meter .track{flex:1; height:8px; border-radius:999px; background:var(--soft); overflow:hidden}
+.meter .fill{display:block; height:100%; background:var(--primary); border-radius:999px}
+.meter .num{font-size:14px; font-weight:700; color:var(--ink); font-variant-numeric:tabular-nums; white-space:nowrap}
+
+/* ── 도구 막대 ── */
+.toolbar{
+  display:flex; flex-wrap:wrap; gap:12px; align-items:center; margin-bottom:24px;
+  padding:14px 16px; border-radius:24px;
+  background:var(--surface);                 /* 불투명 fallback */
+  border:1px solid var(--glass-border);
+  box-shadow:var(--shadow), var(--glass-inset);
+}
+@supports ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+  .toolbar{ background:var(--glass); backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px); }
+}
+@media (prefers-reduced-transparency: reduce){
+  .toolbar{ background:var(--surface); backdrop-filter:none; -webkit-backdrop-filter:none; }
+}
+.chips{display:flex; gap:8px; flex-wrap:wrap}
+.chip{
+  font:inherit; font-size:15px; cursor:pointer;
+  background:var(--surface); color:var(--ink);
+  border:1px solid var(--control); border-radius:12px; padding:8px 16px;
+  transition:background var(--dur-color) var(--ease-out), color var(--dur-color) var(--ease-out);
+}
+.chip:hover{border-color:var(--primary)}
+.chip[aria-pressed="true"]{background:var(--primary); border-color:var(--primary); color:var(--on-primary); font-weight:700}
+.search{
+  font:inherit; font-size:16px; margin-left:auto; flex:1 1 220px; max-width:340px;
+  background:var(--surface); color:var(--ink);
+  border:1px solid var(--control); border-radius:12px; padding:9px 14px;
+}
+.search::placeholder{color:var(--sub)}
+
+/* ── 보드 ── */
+.board{display:grid; grid-template-columns:1fr; gap:20px; align-items:start}
+@media (min-width:1024px){ .board{grid-template-columns:minmax(0,1fr) minmax(0,1fr)} }
+
+.list{background:var(--surface); border:1px solid var(--line); border-radius:20px; overflow:hidden}
+.axis{
+  display:flex; align-items:baseline; gap:10px;
+  padding:14px 20px; background:var(--soft); border-bottom:1px solid var(--line);
+}
+.axis b{font-size:16px; font-weight:700}
+.axis span{margin-left:auto; font-size:14px; color:var(--sub); font-variant-numeric:tabular-nums}
+
+.row{
+  display:block; width:100%; text-align:left; font:inherit; cursor:pointer;
+  background:var(--surface); color:var(--ink);
+  border:0; border-bottom:1px solid var(--line); padding:16px 20px;
+  transition:background var(--dur-color) var(--ease-out);
+}
+.row:last-child{border-bottom:0}
+.row:hover{background:var(--soft)}
+.row[aria-current="true"]{background:var(--selected); box-shadow:inset 4px 0 0 var(--primary)}
+.row .line1{display:flex; align-items:baseline; gap:10px}
+.rid{font-size:14px; font-weight:700; color:var(--primary); font-variant-numeric:tabular-nums; flex:none}
+.rtitle{font-size:17px; font-weight:600; line-height:1.5; min-width:0; text-wrap:pretty}
+.row .line2{display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-top:8px; padding-left:34px}
+.rmeta{font-size:14px; color:var(--sub)}
+
+.tag{
+  font-size:13px; font-weight:600; padding:3px 10px; border-radius:999px; white-space:nowrap;
+  border:1px solid var(--control); color:var(--ink); background:var(--surface);
+}
+.tag.on{background:var(--primary); border-color:var(--primary); color:var(--on-primary)}
+.tag.hold::before{content:"○ "; }
+.tag.on::before{content:"● "; }
+
+.dots{display:inline-flex; gap:4px; align-items:center}
+.dot{width:9px; height:9px; border-radius:3px; border:1.5px solid var(--control); background:transparent}
+.dot.on{background:var(--primary); border-color:var(--primary)}
+
+/* ── 상세 ── */
+.detail{background:var(--surface); border:1px solid var(--line); border-radius:20px; overflow:hidden}
+@media (min-width:1024px){ .detail{position:sticky; top:24px; max-height:calc(100vh - 48px); overflow:auto} }
+.dhead{padding:24px 24px 20px; background:var(--soft); border-bottom:1px solid var(--line)}
+.dtags{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; align-items:center}
+.dhead h2{font-size:24px; font-weight:800; line-height:1.35; letter-spacing:-.02em; max-width:22ch}
+.dhead .plain{margin-top:8px; font-size:15px; color:var(--sub)}
+.dbody{padding:0 24px 24px}
+.sect{padding:20px 0; border-bottom:1px solid var(--line)}
+.sect:last-child{border-bottom:0}
+.slabel{font-size:14px; font-weight:700; color:var(--sub); margin-bottom:10px; letter-spacing:.02em}
+.shint{font-size:14px; line-height:1.6; color:var(--sub); margin:-4px 0 12px; text-wrap:pretty}
+.sect p{font-size:17px; line-height:1.7; text-wrap:pretty; max-width:60ch}
+.structure{
+  font-size:17px; font-weight:600; color:var(--eyebrow-ink); background:var(--eyebrow-bg);
+  border-radius:12px; padding:14px 18px; line-height:1.65; text-wrap:pretty;
+}
+ul.plainlist{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:8px}
+ul.plainlist li{display:flex; gap:10px; font-size:16px; line-height:1.7; text-wrap:pretty}
+.cn{flex:none; font-weight:700; color:var(--primary); font-variant-numeric:tabular-nums}
+.bullet{flex:none; color:var(--primary); font-weight:700}
+
+.refs{display:flex; flex-direction:column; gap:12px}
+.ref{border:1px solid var(--line); border-radius:16px; padding:16px; background:var(--bg)}
+.ref a{display:block; font-size:16px; font-weight:600; color:var(--ink); text-decoration:none; line-height:1.6; text-wrap:pretty}
+.ref a:hover{color:var(--primary); text-decoration:underline}
+.reused{
+  display:inline-block; margin-top:8px; font-size:13px; font-weight:600;
+  color:var(--primary); border:1px solid var(--primary); border-radius:999px; padding:2px 10px;
+}
+.metrics{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1px; margin-top:12px; background:var(--line); border:1px solid var(--line); border-radius:12px; overflow:hidden}
+@media (min-width:520px){ .metrics{grid-template-columns:repeat(5,minmax(0,1fr))} }
+.metric{background:var(--surface); padding:12px 14px}
+.metric span{display:block; font-size:13px; color:var(--sub)}
+.metric b{display:block; font-size:16px; font-weight:700; font-variant-numeric:tabular-nums; margin-top:2px}
+.metric b.none{color:var(--sub); font-weight:400}
+
+.statusrow{display:flex; gap:8px; flex-wrap:wrap}
+.sbtn{
+  font:inherit; font-size:15px; cursor:pointer; padding:8px 14px; border-radius:12px;
+  border:1px solid var(--control); background:var(--surface); color:var(--ink);
+  transition:background var(--dur-color) var(--ease-out), color var(--dur-color) var(--ease-out);
+}
+.sbtn:hover{border-color:var(--primary)}
+.sbtn[aria-pressed="true"]{background:var(--primary); border-color:var(--primary); color:var(--on-primary); font-weight:700}
+.note{font-size:14px; color:var(--sub); margin-top:10px}
+
+footer{margin-top:32px; padding-top:20px; border-top:1px solid var(--line); color:var(--sub); font-size:14px}
+footer code{font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:13px; color:var(--ink)}
+
+@media (max-width:767px){
+  .frame{padding:20px; border-radius:24px; gap:16px}
+  h1{font-size:26px}
+  .lead p{font-size:15px}
+  .stats{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .stat{padding:12px 10px}
+  .stat b{font-size:22px}
+  .stat span{font-size:12px}
+  .survey p{font-size:15px}
+  .theme legend{line-height:normal; float:none; width:100%}
+}
+@media (prefers-reduced-motion: reduce){ *{transition:none !important; animation:none !important} }
+@media (forced-colors: active){
+  .glow{display:none}
+  .frame,.toolbar,.list,.detail,.ref,.stat,.survey{box-shadow:none; border:1px solid CanvasText}
+  .dot.on,.meter .fill{background:Highlight}
+}
+</style>
+</head>
+<body>
+<div class="glow" aria-hidden="true"></div>
+<div class="page">
+
+  <div class="frame">
+    <div class="lead">
+      <span class="eyebrow">바람대로 · 유튜브 롱폼</span>
+      <h1>원고 20편 제작 보드</h1>
+      <p>시트 v2를 그대로 읽습니다. 지표는 유튜브 API가 주 1회 갱신합니다.</p>
+    </div>
+    <fieldset class="theme">
+      <legend>테마</legend>
+      <label><input type="radio" name="theme" value="system"><span class="mark" aria-hidden="true"></span>시스템</label>
+      <label><input type="radio" name="theme" value="light"><span class="mark" aria-hidden="true"></span>라이트</label>
+      <label><input type="radio" name="theme" value="dark"><span class="mark" aria-hidden="true"></span>다크</label>
+    </fieldset>
+
+    <div class="stats">
+      <div class="stat"><b id="s-total">20</b><span>총 원고</span></div>
+      <div class="stat"><b id="s-ready">0</b><span>착수 가능</span></div>
+      <div class="stat"><b id="s-hold">0</b><span>선행 필요</span></div>
+      <div class="stat"><b id="s-shorts">0</b><span>파생 숏폼</span></div>
+    </div>
+
+    <div class="survey">
+      <p><strong>레퍼런스 지표가 아직 조회수뿐입니다.</strong> 구독자·배율·일평균·게시일은 유튜브 API가 주 1회 채웁니다. 60칸 중 고유 영상은 44개입니다.</p>
+      <div class="meter">
+        <span class="track"><i class="fill" id="survey-bar" style="width:0%"></i></span>
+        <span class="num" id="survey-num">0 / 60</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="toolbar">
+    <div class="chips" id="axis-chips" role="group" aria-label="축 필터"></div>
+    <input class="search" id="q" type="search" placeholder="제목·훅·챕터 검색" aria-label="원고 검색">
+  </div>
+
+  <div class="board">
+    <div class="list" id="list"></div>
+    <div class="detail" id="detail"></div>
+  </div>
+
+  <footer>
+    <p>프로토타입입니다. 상태 변경은 이 브라우저에만 남습니다. 실제 연결은 시트를 원본으로 두고 <code>웹에 게시 → CSV</code>로 읽고 <code>Apps Script doPost</code>로 되씁니다.</p>
+    <p style="margin-top:6px">공개 주소로 올리기 전에 접근 제한을 겁니다.</p>
+  </footer>
+</div>
+
+<script>
+const DATA = {"plans":[{"id":"L01","axis":"세척","length":"8~10분","titlePlain":"시스템에어컨 세척 전 과정 — 분해부터 검수까지","titleHook":"시스템에어컨 청소, 필터 뒤에 세 개가 더 있습니다","structure":"검색어 선점 + 숨은 규모 폭로 + 수량 명시","hook":"천장형 에어컨 세척은 필터를 빼는 일이 아닙니다. 이 영상은 분해에서 검수까지 전 과정입니다. 어디까지 뜯는지, 무엇으로 씻는지, 끝났다는 걸 어떻게 확인하는지.","message":"절차가 공개되면 결과를 판단할 수 있다","chapters":"Ch1 준비·보양 / Ch2 분해(필터→송풍팬→드레인팬→열교환기) / Ch3 세척·헹굼 / Ch4 건조·조립 / Ch5 검수","shorts":"① 천장형, 어디까지 뜯습니까 · 필터를 빼면 끝난 줄 압니다. 그 뒤에 세 개가 더 있습니다 / ② 시스템에어컨은 필터 청소로 안 됩니다 · 필터는 첫 단계가 아니라 마지막 단계입니다 / ③ 세척 끝났다는 걸 확인하는 법 · 전후 사진은 어디서나 보여줍니다 / ④ 세척 중 물과 전기는 어떻게 씁니까 · 집에 있어도 됩니다. 단 셋은 미리 압니다","shortsCount":4,"shoot":"A · 세척 현장","condition":"9월 작업표준 확정 + 세척 현장 1건 (원고 초안 선행 가능)","conversion":"세척 견적 문의","status":"원고 초안 선행 가능","ready":false},{"id":"L02","axis":"세척","length":"6~8분","titlePlain":"셀프 세척의 경계 — 여기까지는 되고 여기부터는 안 됩니다","titleHook":"에어컨 셀프 청소, 딱 여기까지만 하세요","structure":"검색어 선점 + 허용 범위 한정 + 단정 지시","hook":"셀프 세척, 됩니다. 여기까지는. 하지 말라는 영상이 아닙니다. 어디까지 해도 되는지의 선을 긋는 영상입니다.","message":"셀프 세척의 경계는 분해가 아니라 헹굼이다","chapters":"Ch1 셀프로 되는 것 3가지 / Ch2 분해가 만드는 문제는 세척이 아니라 조립 / Ch3 열교환기 — 뿌리는 건 되고 헹구는 게 안 된다 / Ch4 잔류 세제와 냄새 악화 / Ch5 경계선 정리","shorts":"① 셀프 청소, 딱 여기까지 · 셀프 세척, 됩니다. 여기까지는 / ② 나사 하나가 남는 이유 · 문제는 세척이 아니라 조립입니다 / ③ 청소했는데 냄새가 더 심해졌다면 · 뿌리는 건 됩니다. 헹구는 게 안 됩니다","shortsCount":3,"shoot":"촬영 불필요 (도해·그래픽)","condition":"없음 — 즉시 착수 가능","conversion":"브랜드 신뢰 → 세척 위탁 문의","status":"파일럿 · 숏폼 원고 v1 완료","ready":true},{"id":"L03","axis":"세척","length":"6~8분","titlePlain":"에어컨 냄새, 원인이 네 가지로 나뉩니다","titleHook":"에어컨 냄새, 청소하고도 안 빠졌다면","structure":"검색어 선점 + 이미 시도한 해결책 무력화 + 조건 미완결","hook":"에어컨 냄새를 곰팡이 하나로 알고 계신다면, 세척을 해도 냄새가 남는 경우가 생깁니다. 원인이 넷입니다.","message":"원인이 다르면 처치가 다르다. 세척으로 풀리는 건 그중 하나다","chapters":"Ch1 곰팡이 / Ch2 드레인팬 / Ch3 배수 트랩 / Ch4 외부 유입 / Ch5 판별 순서와 세척이 답이 아닌 경우","shorts":"① 에어컨 냄새 원인은 넷입니다 · 에어컨 냄새는 한 종류가 아닙니다 / ② 청소해도 냄새가 남는다면 · 원인이 에어컨 안에 없을 수 있습니다 / ③ 드레인팬을 안 뜯으면 냄새는 그대로 · 곰팡이는 여기 고입니다","shortsCount":3,"shoot":"A · 세척 현장 (부분)","condition":"없음 (촬영분 확보 시 교체)","conversion":"세척 견적 문의","status":"주제 확정","ready":true},{"id":"L04","axis":"세척","length":"5~6분","titlePlain":"세척 주기 1년, 그 숫자는 어디서 왔습니까","titleHook":"에어컨 청소 주기 1년, 누가 정한 겁니까","structure":"검색어 선점 + 통념 수치 인용 + 출처 반문","hook":"에어컨 세척 주기 1년. 어디서 나온 숫자인지 설명하는 곳이 없습니다. 주기는 달력이 정하지 않습니다.","message":"주기는 달력이 아니라 사용 조건이 정한다","chapters":"Ch1 1년이라는 통념의 출처 / Ch2 주기를 바꾸는 변수 3가지(가동시간·조리·습도) / Ch3 반려동물·영유아 가구 / Ch4 숫자가 아니라 신호로 판단하는 법","shorts":"① 청소 주기 1년, 누가 정한 겁니까 · 이 숫자는 어디서 왔습니까 / ② 우리 집은 주기가 더 짧습니다 · 같은 1년이 모든 집에 같지 않습니다","shortsCount":2,"shoot":"촬영 불필요 (도해)","condition":"없음 — 즉시 착수 가능. 자사 권장 주기 숫자는 넣지 않음(B4)","conversion":"세척 견적 문의","status":"주제 확정","ready":true},{"id":"L05","axis":"세척","length":"5~6분","titlePlain":"실외기 청소를 안 하면 생기는 일","titleHook":"실외기 빼고 에어컨만 청소하면 생기는 일","structure":"누락 지점 지목 + 결과 미완결","hook":"에어컨 청소를 맡기면 실외기는 대체로 빠집니다. 그런데 냉방 성능이 떨어지는 원인은 여기 있는 경우가 많습니다.","message":"실외기 열교환 저하가 가동시간과 소음을 늘린다","chapters":"Ch1 실외기가 하는 일 / Ch2 핀 오염이 만드는 것 / Ch3 가동시간·소음 증가 / Ch4 고압세척 절차 / Ch5 집에서 확인하는 법","shorts":"① 실외기는 청소에서 항상 빠집니다 · 냉방이 약해진 원인이 여기 있습니다 / ② 실외기 핀을 보면 압니다 · 이 상태면 열이 안 빠집니다 / ③ 실외기 고압세척 전후 · 같은 기계입니다","shortsCount":3,"shoot":"A · 세척 현장 (실외기 구간)","condition":"세척 현장 1건. 전기요금 절감률 등 수치 금지(B2)","conversion":"실외기 세척 견적 문의","status":"주제 확정","ready":false},{"id":"L06","axis":"세척","length":"6~8분","titlePlain":"세척 당일, 집에서 무슨 일이 일어납니까","titleHook":"에어컨 청소하는 날, 집에서 벌어지는 일","structure":"시점 한정 + 내 공간 침입 + 결과 미완결","hook":"집에 있는 채로 세척해도 되는지 묻는 분이 많습니다. 됩니다. 다만 물·전기·소음 세 가지가 어떻게 처리되는지는 미리 아셔야 합니다.","message":"거주 중 세척은 가능 여부가 아니라 절차의 문제다","chapters":"Ch1 도착~보양 / Ch2 물 — 어디서 받고 어디로 버리나 / Ch3 전기 — 차단과 복구 / Ch4 소음·시간 / Ch5 고객이 미리 준비할 것","shorts":"① 집에 있는 채로 청소해도 됩니까 · 됩니다. 단 이 셋은 미리 압니다 / ② 청소할 때 물은 어디로 갑니까 · 이 준비가 없으면 바닥이 젖습니다 / ③ 청소 전에 치워두실 것 · 도착 전 5분이면 됩니다","shortsCount":3,"shoot":"A · 세척 현장","condition":"9월 작업표준 확정(자사 절차 — B4)","conversion":"세척 예약(불안 해소)","status":"주제 확정","ready":false},{"id":"L07","axis":"설치","length":"8~10분","titlePlain":"시스템에어컨 설치, 고객이 직접 검수하는 항목표","titleHook":"시스템에어컨 설치 끝났다는 말, 그대로 믿으면 안 됩니다","structure":"상대 발언 인용 + 신뢰 차단 경고","hook":"설치가 끝났다는 말과 설치가 됐다는 것은 다릅니다. 전문가가 아니어도 확인할 수 있는 항목이 있습니다.","message":"검수 항목이 있으면 고객이 판단할 수 있다","chapters":"Ch1 배관 — 단열·구배 / Ch2 진공·기밀 / Ch3 드레인 / Ch4 실외기 고정·이격 / Ch5 시운전과 인수 서류","shorts":"① 설치 끝났다는 말과 설치가 됐다는 건 다릅니다 · 확인하는 항목이 있습니다 / ② 드레인 구배는 이렇게 확인합니다 / ③ 시운전에서 볼 것 세 가지 · 찬바람이 나오는 건 확인이 아닙니다","shortsCount":3,"shoot":"B · 설치 현장","condition":"대표님 설치 기준 7개 회신 대기(B4)","conversion":"설치 견적·검수 상담","status":"기준 회신 대기","ready":false},{"id":"L08","axis":"설치","length":"6~8분","titlePlain":"천장이 닫히기 전에 확인해야 할 것","titleHook":"천장 닫히기 전 이 사진 못 받으면 나중에 못 따집니다","structure":"마감 시한 + 지시대명사 + 손실 확정","hook":"천장이 닫히면 이 배관은 다시 볼 수 없습니다. 하자가 생겨도 판단할 근거가 남지 않습니다. 닫히기 전에 볼 것이 있습니다.","message":"매립 전 상태를 기록으로 남기는 것이 검수다","chapters":"Ch1 매립 배관이 하는 일 / Ch2 볼 것 3가지 — 단열·구배·고정 / Ch3 사진 한 장이 하자 판단 근거가 되는 이유 / Ch4 마감 전 고객 입회 시점","shorts":"① 천장이 닫히면 다시 못 봅니다 · 이 배관은 오늘이 마지막입니다 / ② 매립 전 사진, 왜 받아야 합니까 · 하자가 생긴 뒤엔 증거가 없습니다 / ③ 단열이 벗겨진 배관은 이렇게 생겼습니다","shortsCount":3,"shoot":"B · 설치 현장","condition":"설치 현장 1건. 히어로 A안 게시 조건과 연동","conversion":"설치 견적 문의","status":"주제 확정","ready":false},{"id":"L09","axis":"설치","length":"6~8분","titlePlain":"진공과 기밀시험, 왜 합니까","titleHook":"에어컨 진공, 안 잡아도 된다는 말","structure":"검색어 선점 + 업계 통념 인용 + 판단 유보","hook":"이 절차를 두고 업계 안에서도 의견이 갈립니다. 생략해도 된다는 쪽과 반드시 해야 한다는 쪽이 있습니다. 무엇이 걸려 있는지 정리합니다.","message":"절차의 목적을 알면 생략 여부를 판단할 수 있다","chapters":"Ch1 배관 안에 남는 것 — 공기와 수분 / Ch2 진공이 하는 일 / Ch3 기밀시험이 확인하는 것 / Ch4 유지 시간과 게이지 읽는 법 / Ch5 생략했을 때 나타나는 증상과 시점","shorts":"① 진공을 왜 잡습니까 · 배관 안에 남는 건 공기만이 아닙니다 / ② 진공 게이지, 이렇게 읽습니다 · 바늘이 여기서 멈춰야 합니다 / ③ 생략하면 언제 문제가 나옵니까 · 당장은 시원합니다","shortsCount":3,"shoot":"B · 설치 현장","condition":"설치 현장 1건. 특정 시공자·업체를 지칭하지 않는다(B1) — 대상은 절차의 목적","conversion":"설치 견적(기술 신뢰)","status":"주제 확정 · B1 집중 검수","ready":false},{"id":"L10","axis":"설치","length":"5~6분","titlePlain":"실외기 위치, 정해진 조건이 있습니다","titleHook":"아파트 실외기, 아무 데나 달면 안 되는 이유","structure":"대상 한정 + 금지 단정 + 이유 미완결","hook":"실외기는 편한 곳에 두는 장비가 아닙니다. 규정, 이격거리, 그리고 옆집이 있습니다.","message":"위치는 규정·이격·민원 세 조건으로 정해진다","chapters":"Ch1 외벽 설치 제한 / Ch2 이격거리와 열 배출 / Ch3 소음과 민원 / Ch4 공용부·관리사무소 협의 순서 / Ch5 실외기실이 있는 경우","shorts":"① 아파트 외벽 실외기, 규정이 있습니다 · 편한 곳에 두는 장비가 아닙니다 / ② 실외기 이격거리를 안 지키면 · 열이 나갈 곳이 없습니다 / ③ 실외기 소음 민원, 이 순서로 풉니다","shortsCount":3,"shoot":"B · 설치 현장","condition":"설치 현장 1건. 법령 인용 시 조항·연도 병기(B2)","conversion":"실측 신청","status":"주제 확정","ready":false},{"id":"L11","axis":"설치","length":"6~8분","titlePlain":"신축 아파트 시스템에어컨, 옵션과 별도 시공의 차이","titleHook":"신축 시스템에어컨 옵션, 넣지 말라는 얘기가 아닙니다","structure":"검색어 선점 + 예상 반박 선차단 + 비교 축 전환 예고","hook":"분양 옵션으로 넣을지 따로 할지 묻는 분이 많습니다. 금액만 비교하면 답이 안 나옵니다. 비교 항목이 따로 있습니다.","message":"비교 대상은 금액이 아니라 시공 조건과 사후 책임이다","chapters":"Ch1 옵션 시공의 구조 / Ch2 별도 시공의 구조 / Ch3 비교 항목 5가지(기기·배관·마감 시점·하자 창구·A/S) / Ch4 입주 전후 시공 가능 시점 / Ch5 판단 기준","shorts":"① 옵션이 비싼 게 문제가 아닙니다 · 비교 항목이 다릅니다 / ② 하자가 생기면 어디로 연락합니까 · 이게 가장 큰 차이입니다 / ③ 입주 전에만 되는 시공이 있습니다","shortsCount":3,"shoot":"촬영 불필요 (도해)","condition":"없음 — 즉시 착수 가능. 특정 건설사·판매점 지칭 금지(B1)","conversion":"설치 상담 문의","status":"주제 확정","ready":true},{"id":"L12","axis":"설치","length":"6~8분","titlePlain":"구축 아파트에 시스템에어컨, 되는 집과 안 되는 집","titleHook":"우리 집에 시스템에어컨 되는지, 천장 보면 압니다","structure":"1인칭 소유 + 즉석 판별법 제시","hook":"오래된 아파트에 시스템에어컨을 넣고 싶다는 문의가 늘었습니다. 되는 집이 있고 안 되는 집이 있습니다. 기준이 셋입니다.","message":"가능 여부는 취향이 아니라 천장·전기·배관 세 조건이 정한다","chapters":"Ch1 천장 속 깊이 / Ch2 전기 용량과 전선 규격 / Ch3 배관 경로 — 다배관과 단배관 / Ch4 실외기 위치 / Ch5 실측 전에 집에서 확인할 것","shorts":"① 우리 집에 시스템에어컨 되나요 · 천장을 먼저 봅니다 / ② 다배관과 단배관, 뭐가 다릅니까 · 실외기 대수가 갈립니다 / ③ 노후 아파트 전기 용량 확인법","shortsCount":3,"shoot":"촬영 불필요 (도해) / 실측 현장 확보 시 부분","condition":"없음 — 즉시 착수 가능","conversion":"실측 신청","status":"주제 확정","ready":true},{"id":"L13","axis":"설치","length":"6~8분","titlePlain":"에어컨 이전과 재설치, 무엇이 달라집니까","titleHook":"에어컨 이전, 떼는 값이 아니라 다는 값입니다","structure":"검색어 선점 + 통념 교정 대구","hook":"이사할 때 에어컨을 떼서 옮기는 비용이 새로 사는 값과 비슷해지는 경우가 있습니다. 왜 그런지, 옮기는 게 맞는지 정리합니다.","message":"이전은 탈거가 아니라 재설치다","chapters":"Ch1 탈거 — 냉매 회수 / Ch2 기존 배관을 다시 쓸 수 있는 조건 / Ch3 재설치 시 진공·기밀 / Ch4 이전 비용이 갈리는 변수 / Ch5 옮기는 게 맞는 경우와 아닌 경우","shorts":"① 에어컨 이전이 왜 그렇게 비쌉니까 · 떼는 게 아니라 다시 설치하는 겁니다 / ② 기존 배관, 다시 써도 됩니까 · 조건이 있습니다 / ③ 냉매 회수를 안 하면 · 그 가스는 다시 못 씁니다","shortsCount":3,"shoot":"C · 이전 현장 (또는 B 세션 병합)","condition":"이전 현장 1건. 없으면 B 세션에서 부분 촬영","conversion":"이전 견적 문의","status":"주제 확정 · 현장 확보 필요","ready":false},{"id":"L14","axis":"사용·관리","length":"5~6분","titlePlain":"아파트 시스템에어컨 전기요금은 왜 다르게 나옵니까","titleHook":"같은 아파트인데 에어컨 전기요금이 다른 이유","structure":"동일 조건 제시 + 차이 발생 + 이유 미완결","hook":"같은 단지, 같은 기기인데 전기요금이 다릅니다. 기기 탓이 아닙니다.","message":"요금은 기기가 아니라 운용 방식과 상태가 정한다","chapters":"Ch1 실외기 1대에 실내기 여러 대 구조 / Ch2 요금이 갈리는 변수 — 가동 방식·설정·오염 / Ch3 실내기 한 대만 켜는 것이 유리한지 / Ch4 확인하는 법","shorts":"① 같은 아파트인데 요금이 다릅니다 · 기기 탓이 아닙니다 / ② 방 하나만 켜면 아낍니까 · 시스템에어컨은 다릅니다 / ③ 오염된 에어컨이 전기를 더 쓰는 이유","shortsCount":3,"shoot":"촬영 불필요 (도해·그래프)","condition":"없음 — 즉시 착수 가능. 수치 인용 시 출처·연도 병기(B2)","conversion":"브랜드 신뢰 → 세척 문의","status":"주제 확정","ready":true},{"id":"L15","axis":"사용·관리","length":"6~8분","titlePlain":"우리 집 에어컨 상태, 직접 확인하는 법","titleHook":"기사 부르기 전에, 리모컨으로 확인되는 것","structure":"지출 직전 시점 + 도구 한정 + 대상 미완결","hook":"기사를 부르기 전에 집에서 확인할 수 있는 것이 있습니다. 다섯 가지입니다.","message":"점검은 고장 난 뒤가 아니라 그 전에 한다","chapters":"Ch1 전원·리모컨·자가진단 코드 / Ch2 필터·흡입구 / Ch3 배수 / Ch4 실외기 / Ch5 이 신호가 나오면 점검을 요청한다","shorts":"① 기사 부르기 전에 확인할 것 · 리모컨으로 됩니다 / ② 에어컨에서 물이 샌다면 · 원인은 대체로 셋입니다 / ③ 이 소리가 나면 점검 요청하세요","shortsCount":3,"shoot":"D · 자택·스튜디오","condition":"없음 — 자택 촬영 가능. 계절 한정 표현 지양","conversion":"브랜드 신뢰 → 점검 문의","status":"주제 확정","ready":true},{"id":"L16","axis":"사용·관리","length":"6~8분","titlePlain":"인버터 에어컨, 정보가 서로 다른 이유","titleHook":"에어컨 계속 켜두라는 말, 껐다 켜라는 말","structure":"상충하는 두 통념 병치 + 판단 유보","hook":"계속 켜두라는 말과 껐다 켜라는 말이 둘 다 있습니다. 둘 다 맞습니다. 조건이 다를 뿐입니다.","message":"정보가 다른 게 아니라 조건이 다르다","chapters":"Ch1 인버터와 정속형의 작동 차이 / Ch2 '계속 켜라'가 맞는 조건 / Ch3 '끄라'가 맞는 조건 / Ch4 냉방·제습·송풍 선택 기준 / Ch5 판단 순서","shorts":"① 계속 켜두는 게 맞습니까 · 둘 다 맞습니다. 조건이 다릅니다 / ② 제습이 냉방보다 전기를 덜 쓴다 · 절반만 맞습니다 / ③ 설정 온도에 닿았는데 실외기가 계속 돕니다","shortsCount":3,"shoot":"촬영 불필요 (도해·그래프)","condition":"없음 — 즉시 착수 가능. 요금 수치 금지(B2)","conversion":"브랜드 신뢰","status":"주제 확정","ready":true},{"id":"L17","axis":"사용·관리","length":"5~6분","titlePlain":"에어컨 가스가 부족하다는 말의 뜻","titleHook":"에어컨 가스 넣었는데 내년에 또 넣는 이유","structure":"반복 경험 제시 + 이유 미완결","hook":"냉매는 쓰면 줄어드는 소모품이 아닙니다. 줄었다면 어딘가에서 새고 있다는 뜻입니다.","message":"보충이 아니라 누설 확인이 먼저다","chapters":"Ch1 냉매는 순환한다 / Ch2 부족 증상 3가지 / Ch3 누설 지점과 확인 방법 / Ch4 충전 전에 해야 하는 것 / Ch5 반복 충전이 남기는 비용","shorts":"① 에어컨 가스는 소모품이 아닙니다 · 줄었다면 새는 겁니다 / ② 이 증상이면 냉매를 의심합니다 · 배관에 성에가 낍니다 / ③ 가스만 넣고 가면 내년에 또 부릅니다","shortsCount":3,"shoot":"D · 자택·스튜디오 (부분)","condition":"없음 (촬영분 확보 시 교체)","conversion":"점검·충전 문의","status":"주제 확정","ready":true},{"id":"L18","axis":"기준·비용","length":"6~8분","titlePlain":"견적서에서 볼 것은 금액이 아니라 항목입니다","titleHook":"에어컨 견적 세 군데 받으면 왜 다 다릅니까","structure":"검색어 선점 + 공통 경험 + 직접 반문","hook":"견적을 세 군데 받으면 금액이 전부 다릅니다. 금액부터 보면 비교가 되지 않습니다. 비교 단위를 바꿔야 합니다.","message":"항목이 같아야 금액 비교가 성립한다","chapters":"Ch1 금액이 다른 이유 / Ch2 세척 비교 항목 5가지 / Ch3 설치 비교 항목 6가지 / Ch4 추가비용이 발생하는 조건 / Ch5 견적서에 없으면 물어볼 것","shorts":"① 견적서에서 금액부터 보면 · 비교가 안 됩니다 / ② 추가비용, 언제 발생합니까 · 이건 견적서에 안 적혀 있습니다 / ③ 청소 견적 비교 항목 다섯 개","shortsCount":3,"shoot":"촬영 불필요 (견적서 도해)","condition":"없음 — 즉시 착수 가능. 경쟁사 견적서 실물 노출 금지(B1)","conversion":"견적 문의","status":"주제 확정","ready":true},{"id":"L19","axis":"기준·비용","length":"6~8분","titlePlain":"문의부터 시공 완료까지, 며칠 걸립니까","titleHook":"에어컨 설치 신청하면 며칠 걸립니까","structure":"검색어 선점 + 직접 질문 그대로","hook":"며칠 걸리냐는 질문에 답이 잘 안 나오는 이유가 있습니다. 단계마다 변수가 다릅니다. 단계는 말씀드릴 수 있습니다.","message":"기간은 하나로 못 말하지만 단계와 변수는 공개할 수 있다","chapters":"Ch1 문의·상담 / Ch2 실측 / Ch3 일정 확정 / Ch4 시공 당일 / Ch5 검수와 완료 시 받는 것 / Ch6 지연 변수","shorts":"① 실측은 왜 필요합니까 · 사진으로는 안 되는 게 있습니다 / ② 시공 당일 집에 있어야 합니까 · 두 구간만 입회하시면 됩니다 / ③ 시공이 끝나면 무엇을 받습니까","shortsCount":3,"shoot":"B · 설치 현장 (부분)","condition":"자사 절차 확정(B4) / 고객 준비 체크리스트 확정","conversion":"설치 신청","status":"절차 확정 대기","ready":false},{"id":"L20","axis":"기준·비용","length":"8~10분","titlePlain":"세척 비용이 그 금액인 이유","titleHook":"에어컨 청소 비용, 원가 그대로 공개합니다","structure":"검색어 선점 + 금기 정보 + 공개 선언","hook":"세척 비용이 왜 그 금액인지 설명하는 곳이 없습니다. 작업 시간, 투입 인원, 소모품까지 그대로 공개합니다.","message":"가격은 시세가 아니라 원가에서 나온다","chapters":"Ch1 실제 작업 시간 / Ch2 투입 인원 / Ch3 소모품·약품·장비 상각 / Ch4 기준가 산출 / Ch5 현장에서 금액이 오르지 않는 이유 / Ch6 분기 재계산과 갱신일 표기","shorts":"① 청소 비용, 왜 그 금액입니까 · 설명하는 곳이 없습니다 / ② 현장에서 금액이 오르지 않는 이유 · 오염이 심해도 같습니다 / ③ 청소 한 건에 몇 시간 걸립니까","shortsCount":3,"shoot":"A · 세척 현장 (부분)","condition":"9월 원가 산출 완료 후 착수. 숫자 없이 공개 금지","conversion":"세척 견적 문의","status":"대기 · 원가 산출 후","ready":false}],"refs":[{"plan":"L01","title":"벽걸이 에어컨 완전 분해 청소 풀버전","url":"https://www.youtube.com/watch?v=nXhyKi32lMo","views":"143만","subs":"","multiple":"","daily":"","published":"","dupe":"2편에서 사용"},{"plan":"L01","title":"2023년형 무풍 클래식 셀프 분해 청소","url":"https://www.youtube.com/watch?v=Cigd5p8Bltg","views":"61만","subs":"","multiple":"","daily":"","published":"","dupe":""},{"plan":"L01","title":"에어컨에서 나온 이것","url":"https://www.youtube.com/watch?v=2Rx3w9H7NXo","views":"95만","subs":"","multiple":"","daily":"","published":"","dupe":""},{"plan":"L02","title":"알고 나면 충격 받는 에어컨 내부 상태 (셀프 분해 청소)","url":"https://www.youtube.com/watch?v=OIIAVuX2ayw","views":"359만","subs":"","multiple":"","daily":"","published":"","dupe":""},{"plan":"L02","title":"셀프로 10만원 아낄 수 있는 에어컨 청소 방법","url":"https://www.youtube.com/watch?v=tj3s0ulpK7E","views":"149만","subs":"","multiple":"","daily":"","published":"","dupe":"2편에서 사용"},{"plan":"L02","title":"누구나 할 수 있는 벽걸이 에어컨 청소 방법","url":"https://www.youtube.com/watch?v=KlR0LLH-R6k","views":"240만","subs":"","multiple":"","daily":"","published":"","dupe":""},{"plan":"L03","title":"에어컨업체에서 절대 알려주지 않는 냄새 없애는 방법","url":"https://www.youtube.com/watch?v=X0GNKdXXEfg","views":"75만","subs":"","multiple":"","daily":"","published":"","dupe":""},{"plan":"L03","title":"그 동안 몰랐던 에어컨 기능, 곰팡이 없애는 법","url":"https://www.youtube.com/watch?v=RzBvKQJPy7A","views":"256만","subs":"","multiple":"","daily":"","published":"","dupe":""},{"plan":"L03","title":"벽걸이에어컨에서 나오는 곰팡이균 세척","url":"https://www.youtube.com/watch?v=x8VXPX10mKc","views":"191만","subs":"","multiple":"","daily":"","published":"","dupe":""},{"plan":"L04","title":"1년전 청소해드린 원룸 벽걸이에어컨 입니다","url":"https://www.youtube.com/watch?v=rI6cgGwKDZQ","views":"302만","subs":"","multiple":"","daily":"","published":"","dupe":""},{"plan":"L04","title":"벽걸이에어컨청소 역대급 오염","url":"https://www.youtube.com/watch?v=Gk1IZFzaJvA","views":"314만","subs":"","multiple":"","daily":"","published":"","dupe":""},{"plan":"L04","title":"에어컨틀고 혹시 기침나면 이것 꼭 해줘야합니다","url":"https://www.youtube.com/watch?v=QfwjGOyfdPE","views":"69만","subs":"","multiple":"","daily":"","published":"","dupe":""},{"plan":"L05","title":"실외기 청소 안하시면 여러가지 문제가 발생합니다","url":"https://www.youtube.com/watch?v=OA_ZfPdRhkE","views":"48만","subs":"","multiple":"","daily":"","published":"","dupe":""},{"plan":"L05","title":"1분순삭 삼성 실외기 청소 고압세척","url":"https://www.youtube.com/watch?v=06AmbRO0gDk","views":"138만","subs":"","multiple":"","daily":"","published":"","dupe":""},{"plan":"L05","title":"에어컨 시원하게 만드는 가장 확실한 방법","url":"https://www.youtube.com/watch?v=WkHgcSs-UEc","views":"120만","subs":"","multiple":"","daily":"","published":"","dupe":""},{"plan":"L06","title":"벽걸이 에어컨 청소 제대로 사기당했어요","url":"https://www.youtube.com/watch?v=qanlUy4X5tM","views":"288만","subs":"","multiple":"","daily":"","published":"","dupe":"3편에서 사용"},{"plan":"L06","title":"벽걸이 에어컨 완전 분해 청소 풀버전","url":"https://www.youtube.com/watch?v=nXhyKi32lMo","views":"143만","subs":"","multiple":"","daily":"","published":"","dupe":"2편에서 사용"},{"plan":"L06","title":"누구나 할 수 있는 벽걸이 캐리어 완전 분해 청소","url":"https://www.youtube.com/watch?v=hP_qbCQ6i7Y","views":"34만","subs":"","multiple":"","daily":"","published":"","dupe":""},{"plan":"L07","title":"에어컨 시공하다가 큰일날 뻔 했습니다","url":"https://www.youtube.com/watch?v=HgC-3tGRdD4","views":"52만","subs":"","multiple":"","daily":"","published":"","dupe":"2편에서 사용"},{"plan":"L07","title":"에어컨 설치 전에 동파이프 산소용접","url":"https://www.youtube.com/watch?v=0hUwzYELPKY","views":"70만","subs":"","multiple":"","daily":"","published":"","dupe":"2편에서 사용"},{"plan":"L07","title":"쇼츠 에어컨배관","url":"https://www.youtube.com/watch?v=ZSvHpeeRJwQ","views":"36만","subs":"","multiple":"","daily":"","published":"","dupe":"2편에서 사용"},{"plan":"L08","title":"쇼츠 에어컨배관","url":"https://www.youtube.com/watch?v=ZSvHpeeRJwQ","views":"36만","subs":"","multiple":"","daily":"","published":"","dupe":"2편에서 사용"},{"plan":"L08","title":"에어컨배관커버 설치하면 이렇게 고급질수가","url":"https://www.youtube.com/watch?v=m1mCgkPOf-A","views":"63만","subs":"","multiple":"","daily":"","published":"","dupe":""},{"plan":"L08","title":"동파이프 하나정도는 잘라보고 갈 수 있잖아","url":"https://www.youtube.com/watch?v=zjQCYyKVy5c","views":"65만","subs":"","multiple":"","daily":"","published":"","dupe":"3편에서 사용"},{"plan":"L09","title":"셀프 에어컨 이전 셀프 배관 교체 (진공·에어퍼지 논쟁 댓글 548)","url":"https://www.youtube.com/watch?v=2nx3hAbbz-M","views":"626만","subs":"","multiple":"","daily":"","published":"","dupe":"4편에서 사용"},{"plan":"L09","title":"에어컨 냉매압력 측정하는법","url":"https://www.youtube.com/watch?v=Dom5HH05T4o","views":"64만","subs":"","multiple":"","daily":"","published":"","dupe":"2편에서 사용"},{"plan":"L09","title":"에어컨 설치 전에 동파이프 산소용접","url":"https://www.youtube.com/watch?v=0hUwzYELPKY","views":"70만","subs":"","multiple":"","daily":"","published":"","dupe":"2편에서 사용"},{"plan":"L10","title":"아파트 외벽에 실외기 설치 불법입니다","url":"https://www.youtube.com/watch?v=ENNEuLP0GjI","views":"225만","subs":"","multiple":"","daily":"","published":"","dupe":""},{"plan":"L10","title":"에어컨 실외기 작동안될때 체크하세요","url":"https://www.youtube.com/watch?v=RCRZVeXYl6w","views":"54만","subs":"","multiple":"","daily":"","published":"","dupe":""},{"plan":"L10","title":"에어컨 실외기 고물상에 팔아봤습니다","url":"https://www.youtube.com/watch?v=Ul4s3aU-M6Q","views":"105만","subs":"","multiple":"","daily":"","published":"","dupe":"2편에서 사용"},{"plan":"L11","title":"시스템 에어컨 추천하지 않는 이유 / 신축아파트 옵션","url":"https://www.youtube.com/watch?v=5ndOFIqRHRc","views":"101만","subs":"","multiple":"","daily":"","published":"","dupe":"2편에서 사용"},{"plan":"L11","title":"생방 도중 에어컨을 열어버린 쇼호스트","url":"https://www.youtube.com/watch?v=cJfKzX7HgRc","views":"50만","subs":"","multiple":"","daily":"","published":"","dupe":""},{"plan":"L11","title":"LG 에어컨 가전 세척, 어디가 잘하지","url":"https://www.youtube.com/watch?v=lNJINNHt788","views":"35만","subs":"","multiple":"","daily":"","published":"","dupe":"2편에서 사용"},{"plan":"L12","title":"시스템 에어컨 추천하지 않는 이유 / 신축아파트 옵션","url":"https://www.youtube.com/watch?v=5ndOFIqRHRc","views":"101만","subs":"","multiple":"","daily":"","published":"","dupe":"2편에서 사용"},{"plan":"L12","title":"600만원짜리 램스 밴딩기 벌써 본전 뽑았습니다","url":"https://www.youtube.com/watch?v=oz5qThs5PMg","views":"63만","subs":"","multiple":"","daily":"","published":"","dupe":""},{"plan":"L12","title":"동파이프 하나정도는 잘라보고 갈 수 있잖아","url":"https://www.youtube.com/watch?v=zjQCYyKVy5c","views":"65만","subs":"","multiple":"","daily":"","published":"","dupe":"3편에서 사용"},{"plan":"L13","title":"셀프 에어컨 이전 셀프 배관 교체 (1m 이동 40만원)","url":"https://www.youtube.com/watch?v=2nx3hAbbz-M","views":"626만","subs":"","multiple":"","daily":"","published":"","dupe":"4편에서 사용"},{"plan":"L13","title":"에어컨 실외기 고물상에 팔아봤습니다","url":"https://www.youtube.com/watch?v=Ul4s3aU-M6Q","views":"105만","subs":"","multiple":"","daily":"","published":"","dupe":"2편에서 사용"},{"plan":"L13","title":"에어컨 냉매압력 측정하는법","url":"https://www.youtube.com/watch?v=Dom5HH05T4o","views":"64만","subs":"","multiple":"","daily":"","published":"","dupe":"2편에서 사용"},{"plan":"L14","title":"전기요금 폭탄 아파트 시스템에어컨, 이유는 이것때문","url":"https://www.youtube.com/watch?v=QAj78VGyE_g","views":"51만","subs":"","multiple":"","daily":"","published":"","dupe":""},{"plan":"L14","title":"에어컨 전기요금 잘못 알려진 상식","url":"https://www.youtube.com/watch?v=-hui7Nx5exw","views":"740만","subs":"","multiple":"","daily":"","published":"","dupe":""},{"plan":"L14","title":"에어컨 이렇게 하루종일 틀면 한달에 3만원 나와요","url":"https://www.youtube.com/watch?v=W8LeEf2OcJw","views":"145만","subs":"","multiple":"","daily":"","published":"","dupe":""},{"plan":"L15","title":"저랑 에어컨 자가점검 하실래요? (삼성전자서비스)","url":"https://www.youtube.com/watch?v=a_4lr0dvpiI","views":"147만","subs":"","multiple":"","daily":"","published":"","dupe":""},{"plan":"L15","title":"우리집 에어컨 자가점검 하는 방법 (LG전자서비스)","url":"https://www.youtube.com/watch?v=eeUaP29xoqw","views":"146만","subs":"","multiple":"","daily":"","published":"","dupe":""},{"plan":"L15","title":"에어컨에서 물이 새요","url":"https://www.youtube.com/watch?v=8w-ygYb08ws","views":"36만","subs":"","multiple":"","daily":"","published":"","dupe":""},{"plan":"L16","title":"인버터 에어컨 올바른 사용법 (댓글 20개 중 14개 미해소 질문)","url":"https://www.youtube.com/watch?v=TpjFPC97KKc","views":"11만","subs":"","multiple":"","daily":"","published":"","dupe":""},{"plan":"L16","title":"에어컨 냉방 vs 제습 vs 송풍, 언제 써야 할까요","url":"https://www.youtube.com/watch?v=LzNBtcLL234","views":"47만","subs":"","multiple":"","daily":"","published":"","dupe":""},{"plan":"L16","title":"인버터 에어컨, 몰랐던 사용방법들","url":"https://www.youtube.com/watch?v=O2nNBK0YyYg","views":"34만","subs":"","multiple":"","daily":"","published":"","dupe":""},{"plan":"L17","title":"에어컨 가스 부족, 이 증상이 나타납니다","url":"https://www.youtube.com/watch?v=8oAx2ulFh2Y","views":"35만","subs":"","multiple":"","daily":"","published":"","dupe":""},{"plan":"L17","title":"2in1에어컨 냉매충전시 주의할점","url":"https://www.youtube.com/watch?v=l0Cl6EFr5QE","views":"74만","subs":"","multiple":"","daily":"","published":"","dupe":""},{"plan":"L17","title":"LA-CO 크레용 사용법 (실외기 누설수리 임시방편)","url":"https://www.youtube.com/watch?v=MhkKLawe1aQ","views":"58만","subs":"","multiple":"","daily":"","published":"","dupe":""},{"plan":"L18","title":"벽걸이 에어컨 청소 제대로 사기당했어요","url":"https://www.youtube.com/watch?v=qanlUy4X5tM","views":"288만","subs":"","multiple":"","daily":"","published":"","dupe":"3편에서 사용"},{"plan":"L18","title":"셀프 에어컨 이전 (1m 이동 40만원 견적)","url":"https://www.youtube.com/watch?v=2nx3hAbbz-M","views":"626만","subs":"","multiple":"","daily":"","published":"","dupe":"4편에서 사용"},{"plan":"L18","title":"LG 에어컨 가전 세척, 어디가 잘하지","url":"https://www.youtube.com/watch?v=lNJINNHt788","views":"35만","subs":"","multiple":"","daily":"","published":"","dupe":"2편에서 사용"},{"plan":"L19","title":"에어컨기사들만 아는 정리 마무리 기술","url":"https://www.youtube.com/watch?v=IvDzA5IausY","views":"168만","subs":"","multiple":"","daily":"","published":"","dupe":""},{"plan":"L19","title":"에어컨 시공하다가 큰일날 뻔 했습니다","url":"https://www.youtube.com/watch?v=HgC-3tGRdD4","views":"52만","subs":"","multiple":"","daily":"","published":"","dupe":"2편에서 사용"},{"plan":"L19","title":"동파이프 하나정도는 잘라보고 갈 수 있잖아","url":"https://www.youtube.com/watch?v=zjQCYyKVy5c","views":"65만","subs":"","multiple":"","daily":"","published":"","dupe":"3편에서 사용"},{"plan":"L20","title":"셀프로 10만원 아낄 수 있는 에어컨 청소 방법","url":"https://www.youtube.com/watch?v=tj3s0ulpK7E","views":"149만","subs":"","multiple":"","daily":"","published":"","dupe":"2편에서 사용"},{"plan":"L20","title":"셀프 에어컨 이전 (1m 이동 40만원)","url":"https://www.youtube.com/watch?v=2nx3hAbbz-M","views":"626만","subs":"","multiple":"","daily":"","published":"","dupe":"4편에서 사용"},{"plan":"L20","title":"벽걸이 에어컨 청소 제대로 사기당했어요","url":"https://www.youtube.com/watch?v=qanlUy4X5tM","views":"288만","subs":"","multiple":"","daily":"","published":"","dupe":"3편에서 사용"}]};
+const AXES = ["세척","설치","사용·관리","기준·비용"];
+const STATUSES = ["대기","진행","촬영 완료","발행"];
+
+let axisFilter = null, q = "", current = DATA.plans[0].id;
+
+const store = {
+  get(){ try { return JSON.parse(localStorage.getItem("bd-board") || "{}"); } catch(e){ return {}; } },
+  set(o){ try { localStorage.setItem("bd-board", JSON.stringify(o)); } catch(e){} }
+};
+
+/* 테마 — light/dark만 저장하고, system은 키를 지워 OS를 다시 따르게 한다. */
+function readTheme(){
+  try { const t = localStorage.getItem("bd-theme"); return (t === "light" || t === "dark") ? t : "system"; }
+  catch(e){ return "system"; }
+}
+function applyTheme(v){
+  if (v === "light" || v === "dark") {
+    document.documentElement.dataset.theme = v;
+    try { localStorage.setItem("bd-theme", v); } catch(e){}
+  } else {
+    delete document.documentElement.dataset.theme;
+    try { localStorage.removeItem("bd-theme"); } catch(e){}
+  }
+}
+document.querySelectorAll('input[name="theme"]').forEach(r => {
+  r.checked = (r.value === readTheme());
+  r.addEventListener("change", () => applyTheme(r.value));
+});
+
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const refsOf = id => DATA.refs.filter(r => r.plan === id);
+const collected = () => DATA.refs.filter(r => r.multiple).length;
+const statusOf = p => store.get()[p.id] || (p.ready ? "진행" : "대기");
+
+function renderStats(){
+  const ready = DATA.plans.filter(p => p.ready).length;
+  document.getElementById("s-total").textContent = DATA.plans.length;
+  document.getElementById("s-ready").textContent = ready;
+  document.getElementById("s-hold").textContent = DATA.plans.length - ready;
+  document.getElementById("s-shorts").textContent = DATA.plans.reduce((a,p) => a + p.shortsCount, 0);
+  const n = collected(), total = DATA.refs.length;
+  document.getElementById("survey-bar").style.width = (n / total * 100) + "%";
+  document.getElementById("survey-num").textContent = n + " / " + total;
+}
+
+function renderChips(){
+  const box = document.getElementById("axis-chips");
+  box.innerHTML = "";
+  const add = (label, val) => {
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "chip"; b.textContent = label;
+    b.setAttribute("aria-pressed", String(axisFilter === val));
+    b.onclick = () => { axisFilter = (axisFilter === val ? null : val); render(); };
+    box.appendChild(b);
+  };
+  add("전체", null);
+  AXES.forEach(a => add(a, a));
+}
+
+function matches(p){
+  if (axisFilter && p.axis !== axisFilter) return false;
+  if (!q) return true;
+  return [p.titleHook, p.titlePlain, p.hook, p.chapters, p.shorts, p.structure]
+    .join(" ").toLowerCase().includes(q);
+}
+
+function renderList(){
+  const list = document.getElementById("list");
+  list.innerHTML = "";
+  let any = false;
+  AXES.forEach(axis => {
+    const items = DATA.plans.filter(p => p.axis === axis && matches(p));
+    if (!items.length) return;
+    any = true;
+    const h = document.createElement("div");
+    h.className = "axis";
+    h.innerHTML = "<b>" + esc(axis) + "</b><span>" + items.length + "편</span>";
+    list.appendChild(h);
+
+    items.forEach(p => {
+      const refs = refsOf(p.id);
+      const done = refs.filter(r => r.multiple).length;
+      const b = document.createElement("button");
+      b.type = "button"; b.className = "row";
+      b.setAttribute("aria-current", String(p.id === current));
+      b.innerHTML =
+        '<span class="line1"><span class="rid">' + p.id + '</span>' +
+        '<span class="rtitle">' + esc(p.titleHook) + '</span></span>' +
+        '<span class="line2">' +
+          '<span class="tag ' + (p.ready ? "on" : "hold") + '">' + (p.ready ? "착수 가능" : "선행 필요") + '</span>' +
+          '<span class="rmeta">' + esc(p.length) + ' · 숏폼 ' + p.shortsCount + '편</span>' +
+          '<span class="dots" role="img" aria-label="레퍼런스 성과 지표 수집 ' + done + '/' + refs.length + '">' +
+            refs.map(r => '<span class="dot' + (r.multiple ? " on" : "") + '"></span>').join("") +
+          '</span>' +
+        '</span>';
+      b.onclick = () => { current = p.id; render(); };
+      list.appendChild(b);
+    });
+  });
+  if (!any) list.innerHTML = '<div class="axis"><b>검색 결과가 없습니다</b></div>';
+}
+
+function metric(label, value){
+  const v = value ? '<b>' + esc(value) + '</b>' : '<b class="none">—</b>';
+  return '<div class="metric"><span>' + label + '</span>' + v + '</div>';
+}
+
+function renderDetail(){
+  const p = DATA.plans.find(x => x.id === current) || DATA.plans[0];
+  const refs = refsOf(p.id);
+  const st = statusOf(p);
+
+  const chapters = p.chapters.split(" / ").map(c => {
+    const m = c.match(/^(Ch\d+)\s*(.*)$/);
+    return m ? '<li><span class="cn">' + m[1] + '</span><span>' + esc(m[2]) + '</span></li>'
+             : '<li><span>' + esc(c) + '</span></li>';
+  }).join("");
+  const shorts = p.shorts.split(" / ").filter(Boolean).map(s =>
+    '<li><span class="bullet" aria-hidden="true">—</span><span>' + esc(s.replace(/^[①②③④]\s*/, "")) + '</span></li>').join("");
+
+  document.getElementById("detail").innerHTML =
+    '<div class="dhead">' +
+      '<div class="dtags">' +
+        '<span class="rid">' + p.id + '</span>' +
+        '<span class="tag ' + (p.ready ? "on" : "hold") + '">' + (p.ready ? "착수 가능" : "선행 필요") + '</span>' +
+        '<span class="tag">' + esc(p.shoot) + '</span>' +
+      '</div>' +
+      '<h2>' + esc(p.titleHook) + '</h2>' +
+      '<p class="plain">일반 제목 · ' + esc(p.titlePlain) + '</p>' +
+    '</div>' +
+    '<div class="dbody">' +
+      '<div class="sect"><div class="slabel">제목 구조</div><div class="structure">' + esc(p.structure) + '</div></div>' +
+      '<div class="sect"><div class="slabel">훅 · 0~15초</div><p>' + esc(p.hook) + '</p></div>' +
+      '<div class="sect"><div class="slabel">핵심 메시지</div><p>' + esc(p.message) + '</p></div>' +
+      '<div class="sect"><div class="slabel">챕터 구성</div><ul class="plainlist">' + chapters + '</ul></div>' +
+      '<div class="sect"><div class="slabel">파생 숏폼 ' + p.shortsCount + '편</div><ul class="plainlist">' + shorts + '</ul></div>' +
+      '<div class="sect"><div class="slabel">참고 레퍼런스 ' + refs.length + '개</div>' +
+      '<p class="shint">이 원고를 쓸 때 참고할 기존 영상입니다. 제작 대상이 아닙니다. 지표는 참고할 값어치가 있는지 판정용입니다.</p>' +
+      '<div class="refs">' +
+        refs.map(r =>
+          '<div class="ref">' +
+            '<a href="' + r.url + '" target="_blank" rel="noopener">' + esc(r.title) + '</a>' +
+            (r.dupe ? '<span class="reused">' + esc(r.dupe) + '</span>' : "") +
+            '<div class="metrics">' +
+              metric("조회수", r.views) +
+              metric("구독자", r.subs) +
+              metric("배율", r.multiple) +
+              metric("일평균", r.daily) +
+              metric("게시일", r.published) +
+            '</div>' +
+          '</div>').join("") +
+      '</div></div>' +
+      '<div class="sect"><div class="slabel">착수 조건</div><p>' + esc(p.condition) + '</p></div>' +
+      '<div class="sect"><div class="slabel">전환 목표</div><p>' + esc(p.conversion) + '</p></div>' +
+      '<div class="sect"><div class="slabel">진행 상태</div><div class="statusrow">' +
+        STATUSES.map(s => '<button class="sbtn" type="button" data-st="' + s + '" aria-pressed="' + (s === st) + '">' + s + '</button>').join("") +
+      '</div><div class="note">누르면 바뀝니다. 프로토타입이라 이 브라우저에만 남습니다.</div></div>' +
+    '</div>';
+
+  document.getElementById("detail").querySelectorAll(".sbtn").forEach(b => {
+    b.onclick = () => { const o = store.get(); o[p.id] = b.dataset.st; store.set(o); render(); };
+  });
+}
+
+function render(){ renderChips(); renderList(); renderDetail(); renderStats(); }
+document.getElementById("q").addEventListener("input", e => { q = e.target.value.trim().toLowerCase(); render(); });
+render();
+</script>
+</body>
+</html>
